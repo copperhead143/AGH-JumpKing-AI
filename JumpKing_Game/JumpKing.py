@@ -54,29 +54,29 @@ class JKGame:
 
 		pygame.display.set_caption('Jump King At Home XD')
 
-	def run_game(self):
-        # Initialize the AI
+	def run_game(self, mode="play", model_path=None):
 		ai_trainer = JumpKingTrainer(self)
-        
-        # Either train the AI:
-		ai_trainer.train()
-        
-        # Or load and run a trained model:
-        # ai_trainer.load_and_run("AI_Models/jumpking_ai_best.h5")
-        
-        # The original game loop can stay below,
-        # the AI will take control through the environment interface
-		while True:
-			self.clock.tick(self.fps)
-			self._check_events()
+		
+		if mode == "train":
+			# Training mode with 8-jump episodes
+			self.fps = 60  # Higher FPS for faster training
+			ai_trainer.train()
+		elif mode == "run_model" and model_path:
+			# Run pre-trained model in 8-jump episodes
+			ai_trainer.load_and_run(model_path)
+		else:
+			# Normal gameplay mode
+			while True:
+				self.clock.tick(self.fps)
+				self._check_events()
 
-			if not os.environ["pause"]:
-				self._update_gamestuff()
+				if not os.environ["pause"]:
+					self._update_gamestuff()
 
-			self._update_gamescreen()
-			self._update_guistuff()
-			pygame.display.update()
-			self._update_audio()
+				self._update_gamescreen()
+				self._update_guistuff()
+				pygame.display.update()
+				self._update_audio()
 
 	def _check_events(self):
 
@@ -219,6 +219,16 @@ class JKGame:
 			pygame.mixer.Channel(channel).set_volume(float(os.environ.get("volume")))
 			
 if __name__ == "__main__":
-
-	Game = JKGame()
-	Game.run_game()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Jump King Game with AI')
+    parser.add_argument('--mode', type=str, default='play', 
+                        choices=['play', 'train', 'run_model'],
+                        help='Game mode: play, train, or run_model')
+    parser.add_argument('--model', type=str, default='AI_Models/jumpking_ai_best.h5',
+                        help='Path to the model file for run_model mode')
+    
+    args = parser.parse_args()
+    
+    Game = JKGame()
+    Game.run_game(mode=args.mode, model_path=args.model)
