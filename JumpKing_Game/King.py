@@ -49,7 +49,7 @@ class King():
 
 		self.isContact = False
 
-		self.isSplat = False
+		self.isSplat = True
 
 		self.isDance = False
 
@@ -129,7 +129,7 @@ class King():
 
 		self.idle_length = 200
 
-		self.splatDuration = 30
+		self.splatDuration = 50
 
 		self.current_image = self.sprites[self.direction]["King_Fell"]
 
@@ -510,7 +510,7 @@ class King():
 
 					if not self.lastCollision:
 						self.isLanded = True
-						if self.speed >= self.maxSpeed * 1.2:
+						if self.speed >= self.maxSpeed:
 							self.isSplat = True
 							self.isWalk = False
 							self.isJump = False
@@ -813,9 +813,11 @@ class King():
 		if direction != "up":
 			self.direction = direction
 
-		if self.lastCollision and self.lastCollision.snow:
+		if self.lastCollision.snow:
+
 			if speed > 2.5:
 				self.angle, self.speed = self.physics.add_vectors(self.angle, self.speed, angle, speed)
+
 		else:
 			self.angle, self.speed = self.physics.add_vectors(self.angle, self.speed, angle, speed)
 
@@ -1111,7 +1113,7 @@ class King():
 
 		self.isContact = False
 
-		self.isSplat = False
+		self.isSplat = True
 
 		self.isDance = False
 

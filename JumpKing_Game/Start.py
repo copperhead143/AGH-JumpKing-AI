@@ -94,6 +94,7 @@ class Start:
 				self.text.blitme(self.screen)
 
 	def update(self):
+
 		if not os.environ["start"]:
 
 			if self.Nexile_Logo_Counter:
@@ -107,7 +108,7 @@ class Start:
 					self.channels[0].play(self.audio["menu_intro"])
 
 				self.title_logo.move_up()
-
+				
 				self.title_logo.brighten()
 
 			else:
@@ -129,11 +130,12 @@ class Start:
 				self.menus.current_menu.active = True
 
 		if os.environ["active"]:
+
 			self.title_logo.fade()
 
 			for channel in self.channels:
 				channel.stop()
-
+				
 			if self.title_logo.fadecomplete and not self.text.complete:
 
 				self.text.brighten()
@@ -147,6 +149,7 @@ class Start:
 				self.fade()
 
 			elif self.complete:
+
 				self.reset()
 				os.environ["gaming"] = "1"
 				os.environ["pause"] = ""

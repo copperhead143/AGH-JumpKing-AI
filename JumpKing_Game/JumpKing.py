@@ -15,7 +15,7 @@ from King import King
 from Babe import Babe
 from Level import Levels
 from Menu import Menus
-from jump_king_ai import JumpKingTrainer
+from jumpking_ai import create_ai_controlled_king
 
 from Start import Start
 
@@ -52,31 +52,32 @@ class JKGame:
 
 		self.start = Start(self.game_screen, self.menus)
 
+		self.ai = create_ai_controlled_king(self.king, self.levels)
+		self.ai_enabled = False
+
 		pygame.display.set_caption('Jump King At Home XD')
 
-	def run_game(self, mode="play", model_path=None):
-		ai_trainer = JumpKingTrainer(self)
-		
-		if mode == "train":
-			# Training mode with 8-jump episodes
-			self.fps = 60  # Higher FPS for faster training
-			ai_trainer.train()
-		elif mode == "run_model" and model_path:
-			# Run pre-trained model in 8-jump episodes
-			ai_trainer.load_and_run(model_path)
-		else:
-			# Normal gameplay mode
-			while True:
-				self.clock.tick(self.fps)
-				self._check_events()
+	def run_game(self):
 
-				if not os.environ["pause"]:
-					self._update_gamestuff()
+		""" Start the main loop for the game """  
+         
+		while True:
 
-				self._update_gamescreen()
-				self._update_guistuff()
-				pygame.display.update()
-				self._update_audio()
+			self.clock.tick(self.fps)
+    
+			self._check_events()
+
+			if not os.environ["pause"]:
+
+				self._update_gamestuff()
+
+			self._update_gamescreen()
+
+			self._update_guistuff()
+
+			pygame.display.update()
+
+			self._update_audio()
 
 	def _check_events(self):
 
@@ -94,6 +95,10 @@ class JKGame:
 
 				self.menus.check_events(event)
 
+				if event.key == pygame.K_a:
+					self.ai_enabled = not self.ai_enabled
+					print(f"AI {'ENABLED' if self.ai_enabled else 'DISABLED'}")
+
 				if event.key == pygame.K_c:
 
 					if os.environ["mode"] == "creative":
@@ -109,8 +114,28 @@ class JKGame:
 				self._resize_screen(event.w, event.h)
 
 	def _update_gamestuff(self):
+        # MODIFY THIS: Use AI when enabled
+		if self.ai_enabled and os.environ["gaming"] and os.environ["active"]:
+            # AI controls the king
+			self.king._ai_check_events()
 
-		self.levels.update_levels(self.king, self.babe)
+			# Continue with normal physics update
+			self.king._add_gravity()
+			self.king._move()
+			self.king._check_collisions()
+			self.king._update_vectors()
+			self.king._update_sprites()
+			self.king._update_audio2()
+			self.king._check_level()
+			self.king._update_timer()
+			self.king._update_stats()
+			self.king._update_particles()
+
+			# Update other game objects normally
+			self.babe.update(self.king)
+		else:
+            # Normal game update
+			self.levels.update_levels(self.king, self.babe)
 
 	def _update_guistuff(self):
 
@@ -217,18 +242,8 @@ class JKGame:
 					continue
 
 			pygame.mixer.Channel(channel).set_volume(float(os.environ.get("volume")))
-			
+
 if __name__ == "__main__":
-    import argparse
-    
-    parser = argparse.ArgumentParser(description='Jump King Game with AI')
-    parser.add_argument('--mode', type=str, default='play', 
-                        choices=['play', 'train', 'run_model'],
-                        help='Game mode: play, train, or run_model')
-    parser.add_argument('--model', type=str, default='AI_Models/jumpking_ai_best.h5',
-                        help='Path to the model file for run_model mode')
-    
-    args = parser.parse_args()
-    
-    Game = JKGame()
-    Game.run_game(mode=args.mode, model_path=args.model)
+
+	Game = JKGame()
+	Game.run_game()
