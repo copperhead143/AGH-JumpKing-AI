@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Enhanced Jump King AI with Improved Obstacle Avoidance and Trajectory Planning
+Enhanced Jump King AI with Improved Obstacle Avoidance and Trajectory Planning - FIXED VERSION
 """
 
 import math
@@ -10,23 +10,28 @@ import random
 import time
 
 class JumpPhysicsCalculator:
-    """Accurate physics calculator matching your King.py implementation"""
-    
-    def __init__(self):
-        # Physics constants from your code
+    """Accurate physics calculator matching King.py implementation"""
+    def __init__(self, king=None, levels=None):
+        # Store references
+        self.king = king
+        self.levels = levels
+
+        # Physics constants
         self.gravity_force = 0.27
-        self.gravity_angle = math.pi  # Downward
-        self.max_speed = 11
+        self.gravity_angle = math.pi  # Downward force
+        self.max_speed = 11.0
         self.elasticity = 0.925
-        
-        # Jump constants (from King.py analysis)
+
+        # Jump charge parameters
         self.base_jump_speed = 1.5
         self.charge_power = 1.13
-        self.charge_divisor = 5
+        self.charge_divisor = 5.0
+
+        # Directional and angle modifiers
         self.directional_bonus = 0.9
         self.angle_modifier = 45.5
-        
-        # King dimensions
+
+        # King dimensions for collision
         self.king_width = 20
         self.king_height = 24
         
@@ -330,47 +335,90 @@ class AdaptiveJumpKingAI:
     def __init__(self, king, levels):
         self.king = king
         self.levels = levels
-        self.physics = JumpPhysicsCalculator()
+
+        # Użyj domyślnego konstruktora fizyki
+        self.physics = JumpPhysicsCalculator(self.king, self.levels)
+
+        # Planner do generowania trajektorii
         self.planner = SmartJumpPlanner(self.physics)
-        
-        # State management
+
+        # Zarządzanie stanem planu skoków
         self.current_plan = []
         self.plan_step = 0
         self.charging = False
         self.target_charge = 0
-        
-        # Learning system
-        self.position_memory = {}  # Track what works from each position
+
+        # System uczący się unikania miejsc „stuck"
+        self.position_memory = {}
         self.failed_positions = set()
+        self.position_attempts = {}
         self.last_position = None
         self.stuck_counter = 0
-        self.position_attempts = {}
-        
-        # Performance tracking
-        self.last_level = 0
-        self.jump_history = []
+
+        # FIXED: Zwiększone okno ignorowania detekcji stuck
+        self.ignore_stuck_frames = 0
+        self.level_transition_cooldown = 0  # Dodatkowy cooldown
+
+        # Śledzenie wydajności
+        self.last_level = levels.current_level
         self.level_start_time = time.time()
+
+        # Parametry adaptacyjne
+        self.exploration_rate = 0.1
+        self.patience_threshold = 240  # FIXED: Zwiększone z 180 do 240
         
-        # Adaptive parameters
-        self.exploration_rate = 0.1  # Chance to try suboptimal jumps
-        self.patience_threshold = 180  # Frames to wait before replanning
+        # FIXED: Dodatkowe flagi stabilizujące
+        self.just_changed_level = False
+        self.stable_frames_needed = 60  # Ile klatek czekać na stabilizację
+        self.stable_frame_counter = 0
         
     def get_action(self):
         """Main AI decision function"""
         current_pos = (int(self.king.rect_x), int(self.king.rect_y))
         
-        # Check for level change
+        # FIXED: Lepsze wykrywanie zmiany poziomu
         if self.levels.current_level != self.last_level:
             self.on_level_change()
         
-        # Update stuck detection
-        self.update_stuck_detection(current_pos)
+        # FIXED: Dodatkowe cooldowny po zmianie poziomu
+        if self.level_transition_cooldown > 0:
+            self.level_transition_cooldown -= 1
+            # Podczas cooldownu, tylko czekaj
+            if self.king.isFalling or self.king.isSplat:
+                return "wait"
+            # Jeśli król stoi spokojnie, pozwól na planowanie
+            if not self.king.isFalling and not self.king.isSplat and self.level_transition_cooldown < 30:
+                pass  # Kontynuuj normalnie
+            else:
+                return "wait"
         
-        # If we're falling or splatted, wait
-        if self.king.isFalling or (self.king.isSplat and self.king.splatCount <= self.king.splatDuration):
+        # FIXED: Sprawdź czy król jest w stabilnym stanie
+        if self.just_changed_level:
+            # Czekaj na stabilizację po zmianie poziomu
+            if (not self.king.isFalling and not self.king.isSplat and 
+                abs(self.king.speed) < 0.5):  # Król prawie nie porusza się
+                self.stable_frame_counter += 1
+                if self.stable_frame_counter >= self.stable_frames_needed:
+                    self.just_changed_level = False
+                    self.stable_frame_counter = 0
+                    print("AI: Level transition stabilized, resuming normal operation")
+            else:
+                self.stable_frame_counter = 0
+            
+            # Podczas stabilizacji tylko czekaj
             return "wait"
         
-        # Check if we need to replan
+        # Update stuck detection - tylko jeśli nie jesteśmy w trakcie transitions
+        if not self.just_changed_level and self.level_transition_cooldown == 0:
+            self.update_stuck_detection(current_pos)
+        
+        # If we're falling, splatted, or in unstable state, wait
+        if (self.king.isFalling or 
+            (self.king.isSplat and self.king.splatCount <= self.king.splatDuration) or
+            abs(self.king.speed) > 3.0):  # FIXED: Dodaj sprawdzenie prędkości
+            return "wait"
+        
+        # FIXED: Bardziej konserwatywne sprawdzenie potrzeby replanning
         if self.should_replan():
             self.create_new_plan(current_pos)
         
@@ -379,6 +427,11 @@ class AdaptiveJumpKingAI:
     
     def create_new_plan(self, current_pos):
         """Create a new jump plan from current position with overhead obstacle awareness"""
+        # FIXED: Dodatkowe sprawdzenie stabilności przed planowaniem
+        if self.just_changed_level or self.level_transition_cooldown > 0:
+            print("AI: Delaying planning due to level transition")
+            return
+            
         # Get current level platforms
         platforms = []
         if self.levels.current_level in self.levels.levels:
@@ -514,45 +567,97 @@ class AdaptiveJumpKingAI:
                 return "jump"
     
     def should_replan(self):
-        """Check if we need to create a new plan"""
+        """FIXED: Check if we need to create a new plan"""
+        # Nie planuj podczas transition
+        if self.just_changed_level or self.level_transition_cooldown > 0:
+            return False
+            
         return (not self.current_plan or 
                 self.plan_step >= len(self.current_plan) or
                 self.stuck_counter > self.patience_threshold)
     
     def update_stuck_detection(self, current_pos):
-        """Update stuck detection system"""
-        if self.last_position:
-            distance = math.sqrt((current_pos[0] - self.last_position[0])**2 + 
-                               (current_pos[1] - self.last_position[1])**2)
-            
-            if distance < 10:  # Barely moved
+        """
+        FIXED: Update stuck detection system with better level transition handling
+        """
+        # 1) Ignoruj detekcję przez pierwsze klatki po level change
+        if self.ignore_stuck_frames > 0:
+            self.ignore_stuck_frames -= 1
+            self.last_position = current_pos
+            self.stuck_counter = 0  # FIXED: Reset counter podczas ignore
+            return
+
+        # FIXED: Dodatkowe sprawdzenie stabilności
+        if self.just_changed_level or self.level_transition_cooldown > 0:
+            self.last_position = current_pos
+            self.stuck_counter = 0
+            return
+
+        # 2) Oblicz pionową prędkość z kąta i prędkości Kinga
+        vert_vel = -math.cos(self.king.angle) * self.king.speed
+
+        # 3) Jeśli King ładuje skok lub jest w locie (vert_vel duży), resetujemy licznik
+        if self.charging or abs(vert_vel) > 1 or self.king.isFalling:  # FIXED: Dodano isFalling
+            self.last_position = current_pos
+            self.stuck_counter = max(0, self.stuck_counter - 2)  # FIXED: Reset bardziej agresywny
+            return
+
+        # 4) Gdy King stoi na platformie, mierzymy dystans od ostatniej pozycji
+        if self.last_position is not None:
+            dx = current_pos[0] - self.last_position[0]
+            dy = current_pos[1] - self.last_position[1]
+            distance = math.hypot(dx, dy)
+
+            # FIXED: Zwiększony próg ruchu z 5 do 8 pikseli
+            if distance < 8:
                 self.stuck_counter += 1
             else:
                 self.stuck_counter = max(0, self.stuck_counter - 2)
-        
+
+        # 5) Zapisujemy obecną pozycję
         self.last_position = current_pos
-        
-        # If stuck for too long, mark position as problematic
-        if self.stuck_counter > self.patience_threshold * 2:
-            pos_key = self.position_key(current_pos)
-            self.failed_positions.add(pos_key)
-            self.stuck_counter = 0
-            print(f"AI: Marking position {pos_key} as problematic")
+
+        # 6) Po przekroczeniu progu, oznaczamy tę pozycję jako problematyczną
+        if self.stuck_counter > self.patience_threshold:
+            key = self.position_key(current_pos)
+            if key not in self.failed_positions:
+                self.failed_positions.add(key)
+                print(f"AI: Marking position {key} as problematic (stuck: {self.stuck_counter})")
+            self.stuck_counter = 0  # FIXED: Reset po oznaczeniu
     
     def on_level_change(self):
-        """Handle level change events"""
+        """FIXED: Handle level change events with better state management"""
         print(f"AI: Advanced to level {self.levels.current_level}!")
         self.last_level = self.levels.current_level
+
+        # FIXED: Kompletny reset wszystkich stanów
         self.current_plan = []
+        self.plan_step = 0
+        self.charging = False
+        self.target_charge = 0
         self.stuck_counter = 0
-        self.failed_positions.clear()  # Reset for new level
-        self.position_attempts.clear()
         
-        # Record level completion time
-        current_time = time.time()
-        level_time = current_time - self.level_start_time
-        print(f"AI: Level completed in {level_time:.1f} seconds")
-        self.level_start_time = current_time
+        # FIXED: Nie czyść całkowicie failed_positions - zachowaj trochę historii
+        # ale zredukuj ich wagę
+        old_failed = self.failed_positions.copy()
+        self.failed_positions.clear()
+        # Zachowaj tylko część starych failed positions (z mniejszą wagą)
+        if len(old_failed) > 0:
+            print(f"AI: Clearing {len(old_failed)} failed positions after level change")
+        
+        self.position_attempts.clear()
+        self.last_position = None
+
+        # FIXED: Znacznie dłuższe okresy stabilizacji
+        self.ignore_stuck_frames = 120  # FIXED: 2 sekundy zamiast 0.5s
+        self.level_transition_cooldown = 90  # FIXED: 1.5 sekundy dodatkowego cooldown
+        self.just_changed_level = True
+        self.stable_frame_counter = 0
+
+        # Restart level timer
+        self.level_start_time = time.time()
+        
+        print(f"AI: Level transition cooldowns set - ignore_stuck: {self.ignore_stuck_frames}, cooldown: {self.level_transition_cooldown}")
     
     def position_key(self, pos):
         """Convert position to a key for memory storage"""
@@ -568,7 +673,12 @@ class AdaptiveJumpKingAI:
             'charging': self.charging,
             'target_charge': self.target_charge,
             'failed_positions': len(self.failed_positions),
-            'position_attempts': len(self.position_attempts)
+            'position_attempts': len(self.position_attempts),
+            'ignore_stuck_frames': self.ignore_stuck_frames,
+            'level_transition_cooldown': self.level_transition_cooldown,
+            'just_changed_level': self.just_changed_level,
+            'king_speed': self.king.speed if self.king else 0,
+            'king_is_falling': self.king.isFalling if self.king else False
         }
 
 # Integration function
@@ -592,10 +702,12 @@ def create_ai_controlled_king(king, levels):
         elif action == "wait":
             pass  # Do nothing
         
-        # Debug output occasionally
-        if king.jumpCount % 300 == 0:  # Every 5 seconds at 60fps
+        # FIXED: Bardziej szczegółowy debug output
+        if king.jumpCount % 180 == 0:  # Every 3 seconds at 60fps
             debug_info = ai.get_debug_info()
-            print(f"AI Debug: Level {debug_info['current_level']}, Stuck: {debug_info['stuck_counter']}, Failed pos: {debug_info['failed_positions']}")
+            print(f"AI Debug: Level {debug_info['current_level']}, Stuck: {debug_info['stuck_counter']}, "
+                  f"Cooldown: {debug_info['level_transition_cooldown']}, Speed: {debug_info['king_speed']:.2f}, "
+                  f"Falling: {debug_info['king_is_falling']}, Just changed: {debug_info['just_changed_level']}")
     
     # Replace the AI check events method
     king._ai_check_events = ai_check_events
