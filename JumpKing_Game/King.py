@@ -1182,4 +1182,3 @@ class King():
 		self.speed, self.angle = 0, 0
 
 		self._update_sprites()
-
