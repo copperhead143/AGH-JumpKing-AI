@@ -1,70 +1,137 @@
-# Kamień 1: Dokumentacja Wymagań AI dla Jump Kinga
+# Sprawozdanie z projektu AI do gry Jump King
 
-## 1.1. Cele Projektu
-- **Główny cel:** Stworzenie modelu AI, który ukończy grę *Jump King*.
-- **Szczegółowe cele:**
-  - Integracja procesu uczenia modelu z kodem gry.
-  - Stworzenie dedykowanego środowiska treningowego.
-  - Implementacja algorytmu *Deep Q-Network (DQN)*.
-  - Definicja oraz optymalizacja funkcji nagrody.
-  - Monitorowanie i analiza postępów treningowych.
-
-## 1.2. Zakres Wymagań
-- **Funkcjonalne:**
-  - **Integracja z kodem źródłowym gry.**
-  - **Implementacja algorytmów RL:** Wdrożenie metody DQN z mechanizmem *replay buffer*.
-  - **Monitorowanie:** Logowanie i wizualizacja procesu treningowego.
-- **Niefunkcjonalne:**
-  - Stabilność oraz odporność na błędy.
-  - Optymalizacja czasu treningu i wydajności.
-
-## 1.3. Wymagane Zasoby
-- **Język programowania:** Python
-- **Biblioteki i narzędzia:**
-  - TensorFlow
-  - NumPy
-  - OpenCV
-  - TensorBoard
-
-## 1.4. Określenie Problemu
-- **Problem:**
-  Stworzenie AI, które skutecznie ukończy grę *Jump King*, optymalizując podejmowane decyzje.
-- **Wyzwania:**
-  - Opracowanie odpowiedniej funkcji nagrody odzwierciedlającej postęp w grze.
-  - Stabilizacja procesu uczenia oraz optymalizacja działania agenta.
-  - Skuteczne zarządzanie eksploracją i eksploatacją w dynamicznym środowisku gry.
+**Data:** 31.05.2025  
+**Środowisko:** Windows/macOS + VSCode + Pipenv  
+**Technologie:** Python 3.10+, Pygame, NumPy
 
 ---
 
-# Kamień 2: Zbór Danych
+# Kamień 1: Dokumentacja Wymagań AI dla Jump Kinga
 
-## 2.1. Gra jako Zbór Danych
-W projekcie wykorzystujemy klon gry *Jump King* napisany w Pythonie jako główne źródło danych. Gra została zmodyfikowana w celu automatycznego rejestrowania istotnych informacji dotyczących rozgrywki, co umożliwia zbieranie danych niezbędnych do treningu modelu AI. Zebrane dane obejmują:
-- Stany gry (np. pozycja postaci, aktualne przeszkody).
-- Akcje podejmowane przez gracza (np. skoki, ruchy w lewo/prawo).
-- Pokonane etapy gry oraz powtarzające się błędy.
+## 1.1. Cele Projektu
+- **Główny cel:** Stworzenie modelu AI, który autonomicznie pokonuje grę *Jump King*.
+- **Szczegółowe cele:**
+  - Integracja procesu podejmowania decyzji z silnikiem gry w czasie rzeczywistym.
+  - Stworzenie i testowanie środowiska treningowego pod algorytm DQN.
+  - Zaprojektowanie funkcji nagrody oraz logiki oceny postępów.
+  - Analiza i ewaluacja działania modelu.
+  - Refaktoryzacja w kierunku wydajnej i przewidywalnej AI opartej na heurystyce.
 
-## 2.2. Zasady Gry
-Aby poprawnie przygotować zbór danych, niezbędne jest dogłębne zrozumienie zasad rządzących rozgrywką w *Jump King*:
-- **Mechanika rozgrywki:**
-  - Gra polega na wykonywaniu precyzyjnych skoków, umożliwiających przemieszczanie się po wyżej położonych platformach.
-  - Każdy ruch gracza zmienia stan gry i wpływa na kolejne decyzje modelu.
-- **Cele i przeszkody:**
-  - Gracz musi pokonać szereg etapów, aby osiągnąć szczyt i ukończyć grę.
-  - Skuteczna analiza sukcesów i porażek umożliwia lepsze oznaczanie danych.
-- **Warunki zwycięstwa:**
-  - Sukcesem jest ukończenie gry lub osiągnięcie określonego punktu kontrolnego.
-  - Te kryteria są kluczowe dla poprawnej definicji funkcji nagrody.
+## 1.2. Zakres Wymagań
+- **Funkcjonalne:**
+  - Integracja AI z klasami `Game`, `King`, `Level` w kodzie gry.
+  - Możliwość sterowania postacią poprzez logikę AI.
+  - Obsługa danych wejściowych reprezentujących stan gry.
+  - Decyzje oparte na danych w czasie rzeczywistym.
+- **Niefunkcjonalne:**
+  - Niska latencja — działanie płynne i responsywne.
+  - Stabilność działania nawet w przypadku nieprzewidywalnych błędów silnika gry.
+  - Możliwość uruchomienia zarówno na Windows, jak i macOS.
 
-## 2.3. Zasady Uczenia Modelu
-Proces uczenia AI opiera się na metodach *Reinforcement Learning (RL)*, w szczególności na algorytmie *Deep Q-Network (DQN)*. Kluczowe elementy tego procesu to:
-- **Definicja funkcji nagrody:**
-  - Premiuje postęp w grze oraz osiąganie kolejnych poziomów.
-  - Karze za błędy, takie jak duże spadki, ale uwzględnia sytuacje, gdzie spadek może być strategicznie korzystny.
-- **Mechanizm *replay buffer*:**
-  - Przechowuje doświadczenia agenta, co stabilizuje proces uczenia poprzez ponowne wykorzystanie danych z poprzednich epizodów.
-- **Strategia eksploracji i eksploatacji:**
-  - Zapewnia równowagę między odkrywaniem nowych strategii a wykorzystywaniem zdobytej wiedzy.
-- **Optymalizacja i tuning:**
-  - Kluczowe parametry, takie jak współczynnik uczenia (*learning rate*), wielkość *batcha* oraz częstotliwość aktualizacji modelu, są dostosowywane na podstawie eksperymentów i analizy wyników.
+## 1.3. Wymagane Zasoby
+- **Język programowania:** Python 3.10+
+- **Środowisko IDE:** Visual Studio Code
+- **Biblioteki:**
+  - `pygame` – silnik gry
+  - `tensorflow` – implementacja DQN
+  - `numpy` – obliczenia
+  - `collections`, `random`, `os` – kontrola logiki AI
+- **Zarządzanie środowiskiem:** pipenv
 
+## 1.4. Określenie Problemu
+- **Opis:** Gra *Jump King* wymaga precyzyjnych skoków, a pomyłki są kosztowne — często prowadzą do znacznego cofnięcia postępu.
+- **Wyzwania:**
+  - Opracowanie algorytmu, który potrafi poradzić sobie z fizyką gry.
+  - Skuteczna implementacja strategii i decyzji przy dużej liczbie warunków brzegowych.
+  - Poradzenie sobie z błędami i bugami w zewnętrznym silniku gry (klon z GitHuba).
+
+---
+
+# Kamień 2: Zbiór Danych i Integracja ze Środowiskiem Gry
+
+## 2.1. Gra jako Źródło Danych
+Do celów projektu wykorzystano zmodyfikowany klon gry *Jump King* napisany w Pythonie z użyciem Pygame. Integracja AI z grą polegała na bezpośrednim odczycie właściwości obiektów:
+
+- Pozycja gracza (`x`, `y`)
+- Prędkość, kąt skoku, stan (`isFalling`, `isCrouch`, `isSplat`)
+- Informacja o poziomie (`current_level`)
+- Różnica wysokości względem początku epizodu
+
+## 2.2. Reprezentacja Stanu i Danych
+W wersji DQN stan gry reprezentowano jako wektor 8 liczb:
+1. Normalizowana pozycja `x`
+2. Normalizowana pozycja `y`
+3. Prędkość skoku (0–1)
+4. Kąt skoku
+5. Czy na ziemi
+6. Czy gracz kuca
+7. Różnica pozycji względem poprzedniego kroku
+8. Poziom gry
+
+Zbierane dane były zapisywane w buforze doświadczeń (`replay buffer`) o długości 10 000. Dodatkowo zastosowano funkcję nagrody premiującą wzrost wysokości, a karzącą spadki, kolizje i utratę poziomu.
+
+## 2.3. Problemy z Danymi
+- Poziomy były resetowane przez silnik gry bez zachowania spójnych współrzędnych.
+- Brak spójnych zdarzeń typu „awans” / „porażka” — utrudniało przypisanie nagrody.
+- Niska powtarzalność rozgrywki prowadziła do problemów z uogólnieniem danych w DQN.
+
+---
+
+# Kamień 3: Od DQN do pierwszej wersji heurystyki
+
+## 3.1. Próba implementacji DQN
+
+### Główne cechy DQN:
+- **Wejście:** 8-wymiarowy wektor cech stanu (pozycja, prędkość, kąt, poziom, kolizje, itp.)
+- **Wyjście:** 6 dyskretnych akcji – skoki lewo/prawo z różną mocą (słaby/średni/mocny)
+- **Bufor pamięci:** 10 000 doświadczeń `(s, a, r, s', done)`
+- **Sieć neuronowa:** 2 warstwy Dense (32 neurony), aktywacja ReLU, optymalizator Adam
+- **Eksploracja:** ε-greedy z dekrementacją ε = 0.995
+
+### Wyniki:
+- Trening prowadzono w sumie przez ponad 50h na dwóch urzadzeniach.
+- Model nie wykazywał wyraźnej poprawy – potrafił maksymalnie awansować o jeden poziom.
+- Uczenie było chaotyczne – brak stabilnych trajektorii i powtarzalnych sukcesów.
+- AI często wykonywała losowe skoki lub pozostawała w miejscu.
+- Dynamiczne, nieregularne środowisko gry (zwłaszcza kolizje i fizyka) nie sprzyjało skutecznemu uczeniu.
+
+Zdecydowano o porzuceniu DQN na rzecz bardziej kontrolowanego podejścia.
+
+---
+
+## 3.2. Przejście na pierwszą wersję algorytmu heurystycznego
+
+Po rezygnacji z DQN, rozpoczęto prace nad pierwszą wersją **deterministycznego algorytmu heurystycznego**. Celem było ręczne zaprogramowanie reguł decyzyjnych, bazujących na prostych warunkach logicznych.
+
+### Założenia:
+- AI monitorowała pozycję postaci i sprawdzała, czy znajduje się w wyznaczonej „strefie skoku”.
+- Jeśli warunek był spełniony, wykonywano przypisany do niej skok.
+- Próbowano nadal obsługiwać **przechodzenie między poziomami**, co komplikowało logikę.
+- Po zmianie poziomu gra resetowała współrzędne gracza, przez co AI często traciła kontekst, myląc np. awans z upadkiem.
+- AI nie radziła sobie z bardziej złożonymi scenariuszami — skakała w miejscu lub wykonywała puste akcje.
+
+### Problemy:
+- Brak wall bounce, co ograniczało strategię ruchu.
+- Kod miał ponad 700 linii — bardzo trudny w utrzymaniu.
+- Mnogość warunków specjalnych prowadziła do błędów i zablokowań.
+- Działanie było niestabilne i nieprzewidywalne.
+
+---
+
+# Kamień 4: Optymalizacja heurystyki i stabilna wersja AI
+
+## 4.1. Kluczowe zmiany
+- **Rezygnacja z poziomów:** model działa tylko na jednym poziomie, eliminując problemy z resetem pozycji.
+- **Wall bounce:** dodano mechanikę odbijania się od ścian — AI zyskała nową strategię przechodzenia poziomu.
+- **Precyzyjna kontrola:** ustalono konkretne warunki wykonania skoku zależne od pozycji gracza.
+- **Redukcja kodu:** z 700 do ~300 linijek, modularność i lepsza czytelność.
+
+## 4.2. Efekty
+- AI działa deterministycznie i powtarzalnie.
+- Jest w stanie stabilnie przechodzić poziom, reagować na zmiany i radzić sobie z bardziej złożonymi układami platform.
+- Model można rozwijać dalej — np. przywrócenie poziomów, wprowadzenie zmiennych warunków środowiskowych itp.
+
+## 4.3. Wnioski
+To właśnie na tym etapie AI osiągnęła funkcjonalność odpowiadającą celowi projektu. Kod jest stabilny, a model radzi sobie w trudnych warunkach bez potrzeby stosowania uczenia maszynowego.
+
+---
