@@ -95,6 +95,8 @@ Zbierane dane były zapisywane w buforze doświadczeń (`replay buffer`) o dług
 - AI często wykonywała losowe skoki lub pozostawała w miejscu.
 - Dynamiczne, nieregularne środowisko gry (zwłaszcza kolizje i fizyka) nie sprzyjało skutecznemu uczeniu.
 
+![cotusiedziejeXD](image.png)
+
 Zdecydowano o porzuceniu DQN na rzecz bardziej kontrolowanego podejścia.
 
 ---
@@ -131,7 +133,64 @@ Po rezygnacji z DQN, rozpoczęto prace nad pierwszą wersją **deterministyczneg
 - Jest w stanie stabilnie przechodzić poziom, reagować na zmiany i radzić sobie z bardziej złożonymi układami platform.
 - Model można rozwijać dalej — np. przywrócenie poziomów, wprowadzenie zmiennych warunków środowiskowych itp.
 
-## 4.3. Wnioski
+## 4.3 Struktura algorytmu
+W finalnej wersji projektu zastosowano **adaptacyjny algorytm heurystyczny** realizujący skoki na podstawie symulowanej trajektorii oraz prostego systemu planowania. AI nie korzysta z uczenia maszynowego — jej działanie opiera się na obliczeniach fizycznych i analizie kolizji z platformami w czasie rzeczywistym.
+
+## Struktura algorytmu
+
+Algorytm składa się z trzech głównych komponentów:
+
+### 1. `JumpPhysicsCalculator`
+Moduł odpowiedzialny za:
+- symulację trajektorii skoku (uwzględnia grawitację, prędkość i kąt skoku),
+- dodawanie wektorów ruchu: siły skoku + siła grawitacji,
+- wykrywanie kolizji trajektorii z platformami lub ścianami (obsługa wall bounce),
+- detekcję rodzaju kolizji: lądowanie, odbicie od ściany, przeszkoda.
+
+### 2. `SmartJumpPlanner`
+Moduł planujący skoki:
+- generuje wiele trajektorii skoków w lewo/prawo dla różnych czasów ładowania (charge),
+- każdą trajektorię sprawdza pod kątem kolizji z platformami,
+- oblicza **score** dla każdego możliwego skoku (na podstawie odległości poziomej oraz względnej wysokości),
+- sortuje i wybiera najlepszą trajektorię,
+- uwzględnia możliwość skoku z odbiciem od ściany (`bounce`).
+
+### 3. `AdaptiveJumpKingAI`
+Główna logika AI:
+- działa w cyklach planowania → ładowania → wykonania skoku,
+- planuje tylko gdy gracz jest na ziemi (`lastCollision`),
+- ładuje skok przez `jumpCount` do ustalonej wartości,
+- wykonuje skok w lewo lub prawo zależnie od wybranego planu,
+- po wykonaniu skoku czeka na ponowne zetknięcie z platformą i planuje kolejny.
+
+---
+
+## Przykładowy cykl działania AI
+
+1. **AI wykrywa, że gracz stoi na platformie.**
+2. **Planner generuje trajektorie** i wybiera najlepszy skok w prawo (np. `charge=23`).
+3. **AI wchodzi w tryb „crouch”**, zwiększając `jumpCount` z każdą klatką.
+4. Gdy `jumpCount` ≥ `target_charge`, **AI wykonuje skok** w zaplanowanym kierunku.
+5. **Po skoku** AI czeka na ponowny kontakt z podłożem (`lastCollision != None`), aby powtórzyć proces.
+
+---
+
+## Zalety podejścia
+
+- **Deterministyczne i przewidywalne:** brak eksploracji, pełna kontrola nad trajektorią.
+- **Realna analiza fizyki:** symulacja wewnętrzna pozwala ocenić skuteczność skoku przed jego wykonaniem.
+- **Obsługa wall bounce:** AI może świadomie wykonać skok z odbiciem od ściany.
+- **Możliwość rozbudowy:** np. dodanie pamięci trajektorii, bardziej złożone strategie (podwójny bounce, skoki w pionie itd.).
+
+---
+
+## Ograniczenia
+
+- AI działa wyłącznie **w poziomie** (skoki w lewo/prawo); nie obsługuje celowego skakania pionowego.
+- Planner przeszukuje jedynie ograniczoną przestrzeń możliwych skoków (4 zakresy ładowania x 2 kierunki).
+- Nie uwzględnia trajektorii z uwagi na przyszłe poziomy ani nie przewiduje długoterminowych sekwencji.
+
+## 4.4. Wnioski
 To właśnie na tym etapie AI osiągnęła funkcjonalność odpowiadającą celowi projektu. Kod jest stabilny, a model radzi sobie w trudnych warunkach bez potrzeby stosowania uczenia maszynowego.
 
 ---
