@@ -1,0 +1,6 @@
+{"timestamp": "2025-06-13T08:24:06.232506", "type": "bounce", "score": 167.49653416520806, "start_pos": [228.2, 306], "landing_pos": [128, 171.40693166958388], "stuck_counter": 0}
+{"timestamp": "2025-06-13T08:24:07.939304", "type": "landing", "score": 168.5392287277881, "start_pos": [88.26573768258022, 160], "landing_pos": [184.8049664103683, 16], "stuck_counter": 1}
+{"timestamp": "2025-06-13T08:24:09.509625", "type": "landing", "score": 142.02483151702333, "start_pos": [230.38647284870808, 16], "landing_pos": [16.36164133168474, 160], "stuck_counter": 0}
+{"timestamp": "2025-06-13T08:24:11.338416", "type": "bounce", "score": 168.83947432606047, "start_pos": [36.94546524074636, 160], "landing_pos": [165, 78.43012086638636], "stuck_counter": 0}
+{"timestamp": "2025-06-13T08:24:12.657643", "type": "bounce", "score": 149.58513431064893, "start_pos": [204.97897744211835, 16], "landing_pos": [8, 110.78768626293883], "stuck_counter": 1}
+{"timestamp": "2025-06-13T08:24:14.657541", "type": "bounce", "score": 170.557842429159, "start_pos": [47.98821384442497, 160], "landing_pos": [165, 52.90788745283209], "stuck_counter": 2}

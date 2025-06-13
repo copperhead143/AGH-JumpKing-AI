@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
 Adaptive Jump King AI with Wall Bounce and Horizontal-Only Jumps
++ Monitoring metryk skoków
 """
 
 import math
@@ -8,6 +9,9 @@ import pygame
 from typing import List, Tuple, Optional, Dict, Set
 import random
 import time
+
+# Dodaj import monitora
+from monitor import AIMonitor
 
 class JumpPhysicsCalculator:
     """Accurate physics calculator with wall-bounce support"""
@@ -19,12 +23,12 @@ class JumpPhysicsCalculator:
         self.max_speed = 11.0
         self.elasticity = 0.925
         self.base_jump_speed = 1.5
-        self.charge_power = 1.13
+        self.charge_power = 1.11
         self.charge_divisor = 6.0
-        self.directional_bonus = 0.9
+        self.directional_bonus = 0.90
         self.angle_modifier = 45.5
-        self.king_width = 20
-        self.king_height = 24
+        self.king_width = 24
+        self.king_height = 28
 
     def add_vectors(self, angle1, length1, angle2, length2):
         x = math.sin(angle1)*length1 + math.sin(angle2)*length2
@@ -74,7 +78,6 @@ class JumpPhysicsCalculator:
                     return collisions
                 # Side or bottom collision
                 if king_rect.colliderect(plat):
-                    # Side bounce
                     if prev_rect.right <= plat.left:
                         collisions.append({
                             'type': 'bounce',
@@ -117,7 +120,6 @@ class SmartJumpPlanner:
 
     def find_best_jumps(self, start_pos, platforms):
         all_jumps = []
-        # Only horizontal directions
         for direction in ['left', 'right']:
             for range_name in ['medium', 'long', 'max']:
                 for charge in self.charge_ranges[range_name][::3]:
@@ -129,7 +131,6 @@ class SmartJumpPlanner:
                     if not col['success']:
                         continue
                     landing = col['position']
-                    # Score by horizontal distance
                     dist = abs(landing[0] - start_pos[0])
                     score = dist - 0.5*(landing[1]-start_pos[1])
                     all_jumps.append({
@@ -151,6 +152,8 @@ class AdaptiveJumpKingAI:
         self.levels = levels
         self.physics = JumpPhysicsCalculator(king, levels)
         self.planner = SmartJumpPlanner(self.physics)
+        # Inicjalizacja monitora
+        self.monitor = AIMonitor()
         self.current_plan = []
         self.plan_step = 0
         self.charging = False
@@ -160,7 +163,6 @@ class AdaptiveJumpKingAI:
 
     def get_action(self):
         pos = (int(self.king.rect_x), int(self.king.rect_y))
-        # Only plan if on ground to avoid mid-air re-jumps
         on_ground = self.king.lastCollision is not None
         platforms = []
         lvl = self.levels.current_level
@@ -168,8 +170,7 @@ class AdaptiveJumpKingAI:
             platforms = self.levels.levels[lvl].platforms
         if not on_ground:
             return 'wait'
-        # Replan if needed
-        if not self.current_plan or self.plan_step>=len(self.current_plan):
+        if not self.current_plan or self.plan_step >= len(self.current_plan):
             self.create_plan(pos, platforms)
         return self.current_plan and self.current_plan_action()
 
@@ -184,8 +185,7 @@ class AdaptiveJumpKingAI:
     def create_plan(self, pos, platforms):
         jumps = self.planner.find_best_jumps(pos, platforms)
         if not jumps:
-            direction = random.choice(['left','right'])
-            charge = 20
+            direction, charge = random.choice(['left','right']), 20
         else:
             best = jumps[0]
             direction, charge = best['direction'], best['charge']
@@ -203,37 +203,47 @@ class AdaptiveJumpKingAI:
                 self.charging = True
                 self.king.jumpCount = 0
             return 'crouch'
-        # It's a jump command
-        # Ensure still on ground
         if self.king.lastCollision is None:
             return 'wait'
-        # perform jump
+        # Wykonanie skoku
         self.charging = False
         self.plan_step += 1
         _, direction, _ = self.current_plan[self.plan_step-1]
-        if direction == 'left':
-            return 'jump_left'
-        else:
-            return 'jump_right'
+        return 'jump_' + direction
 
     def update_ai(self):
         action = self.execute_plan()
-        if action=='crouch':
+        if action == 'crouch':
             self.king.isCrouch = True
             self.king.jumpCount += 1
-        elif action=='jump_left' or action=='jump_right':
-            # use safe jump only when grounded
+        elif action in ('jump_left', 'jump_right'):
+            # Upewnij się, że AI jest na ziemi
             if self.king.lastCollision:
                 dir = 'left' if action.endswith('left') else 'right'
+                # Logowanie metryki zanim wykonamy skok
+                # typ skoku to col['type'], score itd. – można przechować w last_collision_info
+                last = self.planner.find_best_jumps((self.king.rect_x, self.king.rect_y), 
+                                                     self.levels.levels[self.levels.current_level].platforms)[0]
+                self.monitor.log_jump(
+                    jump_type = last['collision']['type'],
+                    score = last['score'],
+                    start_pos = (self.king.rect_x, self.king.rect_y),
+                    landing_pos = last['landing_pos'],
+                    stuck_counter = self.stuck_counter
+                )
                 self.king._jump(dir)
-        # else wait
+                # Reset stuck counter po udanym ruchu
+                if last['collision']['type'] == 'landing':
+                    self.stuck_counter = 0
+                else:
+                    self.stuck_counter += 1
+        # Inne akcje: 'wait'
+        # Tu możesz dodać np. self.monitor.get_stats() do UI
 
 # Integration
 
 def create_ai_controlled_king(king, levels):
     ai = AdaptiveJumpKingAI(king, levels)
     king._ai = ai
-    def ai_events():
-        ai.update_ai()
-    king._ai_check_events = ai_events
+    king._ai_check_events = ai.update_ai
     return ai
