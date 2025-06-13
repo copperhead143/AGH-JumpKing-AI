@@ -194,3 +194,47 @@ Główna logika AI:
 To właśnie na tym etapie AI osiągnęła funkcjonalność odpowiadającą celowi projektu. Kod jest stabilny, a model radzi sobie w trudnych warunkach bez potrzeby stosowania uczenia maszynowego.
 
 ---
+
+
+# Kamień 5: Wdrożenie modelu i monitorowanie
+
+## 5.1. Integracja AI z silnikiem gry
+- **Hook do pętli głównej**  
+  - W momencie inicjalizacji obiektu `King` wywołujemy:  
+    ```python
+    ai = create_ai_controlled_king(king, levels)
+    ```  
+    co tworzy instancję `AdaptiveJumpKingAI` i podłącza ją pod event loop gry – każde wywołanie `king._ai_check_events()` trafia do metody `update_ai()`.  
+- **Wstrzykiwanie poleceń sterujących**  
+  - AI generuje wątek decyzyjny w stylu „crouch” → „jump_left”/„jump_right”, a `king._jump(dir)` symuluje wciśnięcie przycisku skoku.  
+  - Przełącznik `--enable-ai` w CLI gry pozwala łatwo włączać lub wyłączać moduł AI bez zmiany kodu.
+
+## 5.2 Monitorowanie i implementacja modelu
+
+- **Włączenie AI**  
+  - Klawisz `A` przełącza AI w locie, wywołując `create_ai_controlled_king(king, levels)` i `king._ai_check_events()` w głównej pętli gry.
+
+- **Logowanie metryk**  
+  - W module `monitor.py` używamy standardowego `logging` z `RotatingFileHandler`, aby zapisywać w `ai.log` JSON-lines z:  
+    - `timestamp`, `type` (`landing`/`bounce`), `score`, `start_pos`, `landing_pos`, `stuck_counter`.  
+  - Dzięki rotacji plików log nie rośnie w nieskończoność, a stare wpisy są automatycznie archiwizowane.
+
+- **Proste statystyki**  
+  - Klasa `AIMonitor` trzyma w pamięci zbiór wyników i co 10 skoków wywołuje `print_summary()`, wypisując na konsolę:  
+    - całkowitą liczbę skoków,  
+    - średni `score`,  
+    - procent udanych lądowań,  
+    - liczbę odbić.  
+  - Metoda `get_stats()` zwraca słownik z tymi wartościami, co pozwala na dalsze wykorzystanie (np. w UI gry).
+
+- **Alerty w Pythonie**  
+  - Jeśli `stuck_counter` przekroczy 5, `AIMonitor` uruchamia `send_alert()`, która może:  
+    - wypisać kolorowy komunikat błędu na konsoli,  
+    - wysłać prosty e-mail przez `smtplib`.  
+  - Dodatkowo można wystawić lekki health-check HTTP (np. `Flask` lub `http.server`), który zwraca 200, gdy AI wykonała ostatnią decyzję w ciągu 1 sekundy.
+
+## 5.3. Oczekiwany wynik
+- **Gotowy produkt**: aplikacja `Jump King` z włączonym modułem AI, działająca stabilnie na Windows i macOS.  
+- **Monitorowany system**: pełne logi skoków i metryk .  
+
+W rezultacie uzyskujemy w pełni zaimplementowany i uruchomiony system AI w konkretnym środowisku produkcyjnym, z mechanizmami monitorowania gwarantującymi stabilność i możliwość szybkiej reakcji na nieprzewidziane sytuacje.
